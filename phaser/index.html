@@ -1,0 +1,247 @@
+<html>
+<body onload="start();">
+
+<script>
+    // Fake pixie
+    // To satisfy geom/points.js and geom/rectangle.js
+    PIXI = {};
+
+    // For phaser stuff
+    Phaser = {
+        Physics: {
+        },
+        Component: {
+
+        },
+
+        // Phaser constants
+        NONE: 0,
+        LEFT: 1,
+        RIGHT: 2,
+        UP: 3,
+        DOWN: 4,
+        SPRITE: 0,
+        BUTTON: 1,
+        IMAGE: 2,
+        GRAPHICS: 3,
+        TEXT: 4,
+        TILESPRITE: 5,
+        BITMAPTEXT: 6,
+        GROUP: 7,
+        RENDERTEXTURE: 8,
+        TILEMAP: 9,
+        TILEMAPLAYER: 10,
+        EMITTER: 11,
+        POLYGON: 12,
+        BITMAPDATA: 13,
+        CANVAS_FILTER: 14,
+        WEBGL_FILTER: 15,
+        ELLIPSE: 16,
+        SPRITEBATCH: 17,
+        RETROFONT: 18,
+        POINTER: 19,
+        ROPE: 20,
+        CIRCLE: 21,
+        RECTANGLE: 22,
+        LINE: 23,
+        MATRIX: 24,
+        POINT: 25,
+        ROUNDEDRECTANGLE: 26,
+        CREATURE: 27,
+        VIDEO: 28,
+    };
+
+
+    // Fake group
+    Phaser.Group = function() {
+    }
+    Phaser.Group.prototype = Phaser.Group;
+
+    // Fake world
+    game = {
+        world: {
+            width: 800,
+            height: 600,
+            bounds: {
+                x: 0,
+                y: 0,
+                width: 800,
+                height: 600,
+            },
+        },
+        time: {
+            physicsElapsed: 1/60,
+        },
+    };
+</script>
+
+<script src="utils/Utils.js"></script>
+<script src="math/Math.js"></script>
+<script src="math/QuadTree.js"></script>
+<script src="geom/Point.js"></script>
+<script src="geom/Rectangle.js"></script>
+<script src="Physics.js"></script>
+<script src="physics/World.js"></script>
+<script src="physics/Body.js"></script>
+<script src="physics/TilemapCollision.js"></script>
+<script src="gameobjects/components/PhysicsBody.js"></script>
+
+<script src="core/Signal.js"></script>
+<script src="geom/Matrix.js"></script>
+<script>PIXI.Matrix = Phaser.Matrix;</script>
+<script src="pixi/display/DisplayObject.js"></script>
+<script src="pixi/display/DisplayObjectContainer.js"></script>
+<script src="core/Stage.js"></script>
+<script src="core/Group.js"></script>
+
+
+    <script>
+    var FakeSprite = function(game) {
+        this.scale = {
+            x: 1,
+            y: 1,
+        };
+        this.anchor = {
+            x: 0,
+            y: 0,
+        };
+        this.position = {
+	        xx: 0,
+        	yy: 0,
+		get x() {
+			return this.xx;
+		},
+		set x(posx) {
+			this.xx = posx;
+			if (this.body) {
+				this.body.position.x = posx;
+			}
+		},
+        };
+        this.width = 16;
+        this.height = 16;
+
+        this.exists = true;
+        this.body = null;
+        this.game = game;
+        this.world = game.world;
+	this.physicsType = Phaser.SPRITE;
+    }
+    FakeSprite.prototype.constructor = FakeSprite;
+
+
+    console.log("Main Start");
+
+    var fakeSprite;
+    var fakeSprite2;
+    var fakeGroup;
+
+    function getCurrentTime() {
+        return new Date().getTime()
+    }
+
+    function init() {
+        game.physics = new Phaser.Physics(game, { 'arcade': true});
+        game.physics.startSystem( Phaser.Physics.ARCADE );
+
+	// 1
+        fakeSprite = new FakeSprite(game);
+        game.physics.enable(fakeSprite, Phaser.Physics.ARCADE);
+        fakeSprite.body.myVelocity.x = 100;
+        fakeSprite.body.collideWorldBounds = true;
+
+	// 2, static
+        fakeSprite2 = new FakeSprite(game);
+        game.physics.enable(fakeSprite2, Phaser.Physics.ARCADE);
+        fakeSprite2.position.x = 20;
+        fakeSprite2.body.collideWorldBounds = true;
+        fakeSprite2.body.immovable = true;
+
+	// 3, group
+	fakeGroup = new Phaser.Group(game, null, "test", false, true);
+	fakeGroup.add(fakeSprite2);
+    }
+
+
+    var tickrate = 1;
+    var lastUpdateTime;
+
+    function update() {
+        console.log("Update");
+
+        // time1 is the reference time
+        var time1 = getCurrentTime();
+
+
+        // Update how much time passed since last update
+        var timeSinceLastUpdate = time1 - lastUpdateTime;
+        lastUpdateTime = time1;
+
+	if (timeSinceLastUpdate > 0) {
+//		game.time.physicsElapsed = timeSinceLastUpdate;
+	}
+	console.log("TSLU: " + timeSinceLastUpdate);
+
+
+        // Phaser stuff
+	// update all sprites!
+
+        // preupdate: set body position
+        fakeSprite.body.preUpdate();
+        fakeSprite2.body.preUpdate();
+
+
+        // physics update
+        game.physics.updateAllAmmo();
+
+        // works here!
+        //game.physics.arcade.collide(fakeSprite, fakeSprite2, collDebug);
+        game.physics.arcade.collide(fakeSprite, fakeGroup, collDebug);
+
+
+        // postupdate: set sprite position
+	// update all sprites!
+        fakeSprite.body.postUpdate();
+        fakeSprite2.body.postUpdate();
+
+        console.log("  Position Sprite : " + fakeSprite.position.x);
+        console.log("  Position Sprite2: " + fakeSprite2.position.x);
+        //console.log("  Position Body: " + fakeSprite.body.position.x);
+        //console.log("  Position Body2: " + fakeSprite2.body.position.x);
+
+	game.physics.arcade.overlap(fakeSprite, fakeSprite2, overlapDebug);
+
+
+        // Calculate how long we should sleep to keep
+        // constant tickrate
+        var time2 = getCurrentTime();
+        var diffTime = time2 - time1;
+        var sleepTime = (1000 / tickrate) - diffTime;
+        setTimeout(update, sleepTime);
+    }
+
+    function overlapDebug(a, b) {
+        console.log("Overlap!");
+        console.log("  A: " + a.position.x + " W: " + a.width);
+        console.log("  B: " + b.position.x + " W: " + b.width);
+    }
+
+    function collDebug(a, b) {
+        console.log("Collision!");
+        console.log("  A: " + a.position.x + " W: " + a.width);
+        console.log("  B: " + b.position.x + " W: " + b.width);
+    }
+
+    function start() {
+        console.log("Start");
+        init();
+        update();
+    }
+
+
+</script>
+
+
+
+</body>
+</html>

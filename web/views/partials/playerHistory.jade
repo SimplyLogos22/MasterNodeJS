@@ -1,0 +1,13 @@
+table.table
+    tr
+        th PlayerName
+        th UUID
+        th Time
+        th Event
+    tr(ng-repeat='player in playerHistory')
+        td
+            #col-sm-4 {{player.userName}}
+        td {{player.clientId}}
+        td {{player.dateJoined}}
+        td {{player.event}}
+

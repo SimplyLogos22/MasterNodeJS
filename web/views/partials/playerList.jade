@@ -1,0 +1,26 @@
+
+p There are {{players.length}} players online
+
+
+table.table
+    tr
+        th PlayerName
+        th UUID
+        th State
+        th Position
+        th Health
+        th Bullet Shots
+        th Bullet Hits
+        th barriers
+        th powerups
+    tr(ng-repeat='player in players')
+        td
+            #col-sm-4 {{player.userName}}
+        td {{player.clientId}}
+        td {{player.state.playerState}}
+        td {{player.position.x}} / {{player.position.y}}
+        td {{player.state.stats.health}}
+        td {{player.statistics.round.bullets.shots}} / {{player.statistics.session.bullets.shots}}
+        td {{player.statistics.round.bullets.hits}} / {{player.statistics.session.bullets.hits}}
+        td {{player.statistics.round.barriers}} / {{player.statistics.session.barriers}}
+        td {{player.statistics.round.powerups}} / {{player.statistics.session.powerups}}

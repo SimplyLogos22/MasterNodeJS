@@ -1,0 +1,405 @@
+<html>
+<body onload="start();">
+
+<script>
+    // Fake pixie
+    // To satisfy geom/points.js and geom/rectangle.js
+    PIXI = {};
+
+    // For phaser stuff
+    Phaser = {
+        Physics: {
+        },
+        Component: {
+
+        },
+
+        // Phaser constants
+        NONE: 0,
+        LEFT: 1,
+        RIGHT: 2,
+        UP: 3,
+        DOWN: 4,
+        SPRITE: 0,
+        BUTTON: 1,
+        IMAGE: 2,
+        GRAPHICS: 3,
+        TEXT: 4,
+        TILESPRITE: 5,
+        BITMAPTEXT: 6,
+        GROUP: 7,
+        RENDERTEXTURE: 8,
+        TILEMAP: 9,
+        TILEMAPLAYER: 10,
+        EMITTER: 11,
+        POLYGON: 12,
+        BITMAPDATA: 13,
+        CANVAS_FILTER: 14,
+        WEBGL_FILTER: 15,
+        ELLIPSE: 16,
+        SPRITEBATCH: 17,
+        RETROFONT: 18,
+        POINTER: 19,
+        ROPE: 20,
+        CIRCLE: 21,
+        RECTANGLE: 22,
+        LINE: 23,
+        MATRIX: 24,
+        POINT: 25,
+        ROUNDEDRECTANGLE: 26,
+        CREATURE: 27,
+        VIDEO: 28,
+    };
+
+</script>
+
+<script src="utils/Utils.js"></script>
+<script src="math/Math.js"></script>
+<script src="math/QuadTree.js"></script>
+<script src="geom/Point.js"></script>
+<script src="geom/Rectangle.js"></script>
+<script src="Physics.js"></script>
+<script src="physics/World.js"></script>
+<script src="physics/Body.js"></script>
+<script src="physics/TilemapCollision.js"></script>
+<script src="gameobjects/components/PhysicsBody.js"></script>
+
+<script src="core/Signal.js"></script>
+<script src="geom/Matrix.js"></script>
+<script>PIXI.Matrix = Phaser.Matrix;</script>
+<script src="pixi/display/DisplayObject.js"></script>
+<script src="pixi/display/DisplayObjectContainer.js"></script>
+<script src="core/Stage.js"></script>
+<script src="core/Group.js"></script>
+<script src="core/World.js"></script>
+
+
+<script>
+
+
+    // Fake world
+    game = {
+        world: {
+            width: 800,
+            height: 600,
+            bounds: {
+                x: 0,
+                y: 0,
+                width: 800,
+                height: 600,
+            },
+        },
+        time: {
+            physicsElapsed: 1/60,
+        },
+        state: {
+            onStateChange: {
+                add: function(a, b) {},
+            }
+        },
+    };
+
+
+    /////// Factory
+    Phaser.FakeGameObjectFactory = function(game) {
+        this.game = game;
+    }
+    Phaser.FakeGameObjectFactory.constructor = Phaser.FakeGameObjectFactory;
+
+    Phaser.FakeGameObjectFactory.prototype = {
+        sprite: function (x, y) {
+            var fs = new FakeSprite(this.game);
+            //this.game.stage.addChild(fs);
+            return fs;
+        },
+    }
+    game.add = new Phaser.FakeGameObjectFactory(game);
+
+
+
+    /////// Stage
+    Phaser.FakeStage =  function(game) {
+        this.game = game;
+        PIXI.DisplayObjectContainer.call(this);
+    }
+    Phaser.FakeStage.prototype = Object.create(PIXI.DisplayObjectContainer.prototype);
+    Phaser.FakeStage.prototype.constructor = Phaser.FakeStage;
+
+    /**
+     * This is called automatically after the plugins preUpdate and before the State.update.
+     * Most objects have preUpdate methods and it's where initial movement and positioning is done.
+     *
+     * @method Phaser.Stage#preUpdate
+     */
+    Phaser.FakeStage.prototype.preUpdate = function () {
+
+        this.currentRenderOrderID = 0;
+        //console.log("Preupdate: " + this.children.length);
+
+        //  This can't loop in reverse, we need the orderID to be in sequence
+        for (var i = 0; i < this.children.length; i++)
+        {
+            this.children[i].preUpdate();
+        }
+    };
+
+    /**
+     * This is called automatically after the State.update, but before particles or plugins update.
+     *
+     * @method Phaser.Stage#update
+     */
+    Phaser.FakeStage.prototype.updateAllAmmo = function () {
+
+        var i = this.children.length;
+
+        while (i--)
+        {
+            this.children[i].updateAllAmmo();
+        }
+
+    };
+
+    /**
+     * This is called automatically before the renderer runs and after the plugins have updated.
+     * In postUpdate this is where all the final physics calculatations and object positioning happens.
+     * The objects are processed in the order of the display list.
+     * The only exception to this is if the camera is following an object, in which case that is updated first.
+     *
+     * @method Phaser.Stage#postUpdate
+     */
+    Phaser.FakeStage.prototype.postUpdate = function () {
+        var i = this.children.length;
+
+        while (i--)
+        {
+            this.children[i].postUpdate();
+        }
+
+    };
+
+
+
+
+    game.stage = new Phaser.FakeStage(game);
+
+    //game.stage = new Phaser.Stage(game);
+
+
+
+    var FakeSprite = function(game) {
+        this.game = game;
+
+        this.scale = {
+            x: 1,
+            y: 1,
+        };
+        this.anchor = {
+            x: 0,
+            y: 0,
+        };
+        this.position = {
+            xx: 0,
+            yy: 0,
+            get x() {
+                return this.xx;
+            },
+            set x(posx) {
+                this.xx = posx;
+                if (this.body) {
+                    this.body.position.x = posx;
+                } else {
+                    //console.log("Still no body");
+                }
+            },
+            get y() {
+                return this.yy;
+            },
+            set y(posy) {
+                this.yy = posy;
+                if (this.body) {
+                    this.body.position.y = posy;
+                }
+            },
+        };
+        this.width = 16;
+        this.height = 16;
+
+        this.exists = true;
+        this.body = null;
+        this.game = game;
+        this.world = game.world;
+        this.physicsType = Phaser.SPRITE;
+
+
+        this.preUpdate = function() {
+            this.body.preUpdate();
+        }
+        this.updateAllAmmo = function() {
+            this.body.updateAllAmmo();
+        }
+        this.postUpdate = function() {
+            this.body.postUpdate();
+        }
+
+    }
+    FakeSprite.prototype.constructor = FakeSprite;
+
+
+    console.log("Main Start");
+
+    var fakeSprite;
+    var fakeSprite2;
+    var fakeGroup;
+
+    function getCurrentTime() {
+        return new Date().getTime()
+    }
+
+    function init() {
+        game.physics = new Phaser.Physics(game, { 'arcade': true});
+        game.physics.startSystem( Phaser.Physics.ARCADE );
+
+        // 1
+        fakeSprite = new FakeSprite(game);
+        fakeSprite.name = "a1";
+        game.stage.addChild(fakeSprite);
+        //fakeSprite = game.add.sprite(0, 0);
+
+        game.physics.enable(fakeSprite, Phaser.Physics.ARCADE);
+        //fakeSprite.body.velocity.x = 100;
+        fakeSprite.body.collideWorldBounds = true;
+
+        // 2, static
+        fakeSprite2 = new FakeSprite(game);
+        fakeSprite2.name = "a2";
+        game.stage.addChild(fakeSprite2);
+        //fakeSprite2 = game.add.sprite(64, 0);
+        game.physics.enable(fakeSprite2, Phaser.Physics.ARCADE);
+        fakeSprite2.position.x = 64;
+        fakeSprite2.body.collideWorldBounds = true;
+        fakeSprite2.body.immovable = true;
+
+        // 3, group
+        fakeGroup = new Phaser.Group(game, null, "testGroup", false, true);
+        fakeGroup.add(fakeSprite2);
+    }
+
+
+    var tickrate = 66;
+    var lastUpdateTime;
+
+    function update() {
+        //      console.log("Update");
+
+        // time1 is the reference time
+        var time1 = getCurrentTime();
+
+
+        // Update how much time passed since last update
+        var timeSinceLastUpdate = time1 - lastUpdateTime;
+        lastUpdateTime = time1;
+
+        if (timeSinceLastUpdate > 0) {
+            //		game.time.physicsElapsed = timeSinceLastUpdate;
+        }
+        //       console.log("TSLU: " + timeSinceLastUpdate);
+
+
+        // Phaser stuff
+        // update all sprites!
+
+        game.stage.preUpdate();
+        ///fakeGroup.preUpdate();
+        // preupdate: set body position
+        //fakeSprite.body.preUpdate();
+        //fakeSprite2.body.preUpdate();
+
+
+        // Update body position here!
+        if (timeSinceLastUpdate > 0) {
+            fakeSprite.body.position.x += timeSinceLastUpdate * 10 / 1000;
+        }
+
+        // physics update
+        game.physics.updateAllAmmo();
+        //???? game.world.update();
+
+        // works here!
+        //game.physics.arcade.collide(fakeSprite, fakeSprite2, collDebug);
+        game.physics.arcade.collide(fakeSprite, fakeGroup, collDebug);
+
+
+        // postupdate: set sprite position
+        // update all sprites!
+        game.stage.postUpdate();
+        //fakeSprite.body.postUpdate();
+        //fakeSprite2.body.postUpdate();
+
+        //       console.log("  Position Sprite : " + fakeSprite.position.x);
+        //       console.log("  Position Sprite2: " + fakeSprite2.position.x);
+        //console.log("  Position Body: " + fakeSprite.body.position.x);
+        //console.log("  Position Body2: " + fakeSprite2.body.position.x);
+
+        game.physics.arcade.overlap(fakeSprite, fakeSprite2, overlapDebug);
+
+
+
+        // Debug
+        myDebug(time1);
+
+
+        // Calculate how long we should sleep to keep
+        // constant tickrate
+        var time2 = getCurrentTime();
+        var diffTime = time2 - time1;
+        var sleepTime = (1000 / tickrate) - diffTime;
+        setTimeout(update, sleepTime);
+    }
+
+    function overlapDebug(a, b) {
+        console.log("Overlap!");
+        // console.log("  A: " + a.position.x + " W: " + a.width);
+        // console.log("  B: " + b.position.x + " W: " + b.width);
+    }
+
+    function collDebug(a, b) {
+        //  console.log("Collision!");
+        //  console.log("  A: " + a.position.x + " W: " + a.width);
+        //  console.log("  B: " + b.position.x + " W: " + b.width);
+    }
+
+    function start() {
+        console.log("Start");
+        init();
+        update();
+    }
+
+    var debugTime = 0;
+    function myDebug(curr) {
+
+        if (curr - debugTime < 1000) {
+            return;
+        }
+
+        //for(var clientId in this.players) {
+        console.log("Pos1: "
+                + fakeSprite.position.x
+                + " / "
+                + fakeSprite.position.y
+        );
+        console.log("Pos2: "
+                + fakeSprite2.position.x
+                + " / "
+                + fakeSprite2.position.y
+        );
+        //}
+
+        debugTime = curr;
+    }
+
+</script>
+
+
+
+</body>
+</html>

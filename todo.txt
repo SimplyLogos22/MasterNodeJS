@@ -1,0 +1,53 @@
+- in player: do not reference world, but chamber
+- in network: can't broadcast to all players, just the ones in chamber...
+
+
+client:
+- fix the angel shit
+
+---------------
+
+body.moveLeft etc http://phaser.io/examples/v2/p2-physics/basic-movement
+
+
+---------------
+
+
+    var collisionEvent = {
+        'type': 'collisionEvent',
+        'data': {
+            'affected': 'player',
+            'affectedClientId': '',
+            'reason': 'bullet',
+            'position': pos
+        }
+    }
+
+    var statsEvent = {
+        'type': 'playerStatsUpdate',
+        'data': {
+            'clientId': player.clientId,
+            'health': player.health,
+        }
+    }
+
+
+    var fireEvent = {
+        position: {
+            x: dest.x,
+            y: dest.y,
+        },
+    ->    'angle': rotation,
+        weaponType: "SingleBullet",
+    };
+
+
+    var keyPress = {
+        'key': key,
+        'time': this.getCurrentTime(),
+    }
+
+    var keyRelease = {
+        'key': key,
+        'time': this.getCurrentTime()
+    }

@@ -1,0 +1,14 @@
+p There are {{chambers.length}} chambers online
+
+table.table
+    tr
+        th Chamber Name
+        th Nr of Players
+    tr(ng-repeat='chamber in chambers')
+        td
+            a(href='chamber/{{chamber.name}}') {{chamber.name}}
+        td {{chamber.players.length}}
+
+
+
+

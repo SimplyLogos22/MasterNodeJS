@@ -1,0 +1,138 @@
+
+
+    Phaser.Sprite = function(game, x, y, key, frame) {
+        this.game = game;
+	PIXI.DisplayObjectContainer.call(this);
+	Phaser.Component.Core.init.call(this, game, x, y, key, frame);
+
+/*        this.scale = {
+            x: 1,
+            y: 1,
+        };*/
+        this.anchor = {
+            x: 0,
+            y: 0,
+        };
+/*        this.position = {
+            xx: 0,
+            yy: 0,
+            get x() {
+                return this.xx;
+            },
+            set x(posx) {
+                this.xx = posx;
+                if (this.body) {
+                    this.body.position.x = posx;
+                }
+            },
+            get y() {
+                return this.yy;
+            },
+            set y(posy) {
+                this.yy = posy;
+                if (this.body) {
+                    this.body.position.y = posy;
+                }
+            },
+		set(x, y) {
+			this.xx = x;
+			this.yy = y;
+		},
+        }*/
+//        this.width = 16;
+//        this.height = 16;
+
+	this.fakeSpriteHeight = 16;
+	this.fakeSpriteWidth = 16;
+
+	this.components = {};
+
+        this.exists = true;
+        this.body = null;
+        this.game = game;
+        this.world = game.world;
+        this.physicsType = Phaser.SPRITE;
+        this.type = Phaser.SPRITE;
+
+        this.preUpdate = function() {
+            this.body.preUpdate();
+        }
+        this.update = function() {
+            this.body.update();
+        }
+        this.postUpdate = function() {
+            this.body.postUpdate();
+        }
+
+    }
+
+    Phaser.Sprite.prototype = Object.create(PIXI.DisplayObjectContainer.prototype);
+    Phaser.Sprite.prototype.constructor = Phaser.Sprite;
+
+
+
+
+
+/**
+ * The width of the sprite, setting this will actually modify the scale to achieve the value set
+ *
+ * @property width
+ * @type Number
+ */
+Object.defineProperty(Phaser.Sprite.prototype, 'width', {
+
+    get: function() {
+        return this.scale.x * this.fakeSpriteWidth;
+    },
+
+    set: function(value) {
+        this.scale.x = value / this.fakeSpriteWidth;
+        this._width = value;
+    }
+
+});
+
+/**
+ * The height of the sprite, setting this will actually modify the scale to achieve the value set
+ *
+ * @property height
+ * @type Number
+ */
+Object.defineProperty(Phaser.Sprite.prototype, 'height', {
+
+    get: function() {
+        return  this.scale.y * this.fakeSpriteHeight;
+    },
+
+    set: function(value) {
+        this.scale.y = value / this.fakeSpriteHeight;
+        this._height = value;
+    }
+
+});
+
+
+
+
+Phaser.Component.Core.install.call(Phaser.Sprite.prototype, [
+    'PhysicsBody',
+    'LifeSpan',
+
+]);
+Phaser.Sprite.prototype.preUpdatePhysics = Phaser.Component.PhysicsBody.preUpdate;
+Phaser.Sprite.prototype.preUpdateLifeSpan = Phaser.Component.LifeSpan.preUpdate;
+//Phaser.Sprite.prototype.preUpdateInWorld = Phaser.Component.InWorld.preUpdate;
+Phaser.Sprite.prototype.preUpdateCore = Phaser.Component.Core.preUpdate;
+
+
+
+Phaser.Sprite.prototype.preUpdate = function() {
+
+    if (!this.preUpdatePhysics() || !this.preUpdateLifeSpan() || !this.preUpdateInWorld())
+    {
+        return false;
+    }
+
+    return this.preUpdateCore();
+
+};
